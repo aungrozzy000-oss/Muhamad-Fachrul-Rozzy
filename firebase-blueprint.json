@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "AdminSettings": {
+      "title": "AdminSettings",
+      "description": "Pengaturan sekolah dan jam masuk admin SMA Taruna Andigha",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID admin terautentikasi" },
+        "adminName": { "type": "string", "description": "Nama admin/operator" },
+        "schoolName": { "type": "string", "description": "Nama sekolah" },
+        "checkInDeadlineHour": { "type": "integer", "description": "Jam batas masuk tepat waktu (0-23)" },
+        "checkInDeadlineMinute": { "type": "integer", "description": "Menit batas masuk tepat waktu (0-59)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp pembuatan" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp pembaruan" }
+      },
+      "required": ["userId", "adminName", "schoolName", "checkInDeadlineHour", "checkInDeadlineMinute", "createdAt", "updatedAt"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Data siswa SMA Taruna Andigha dan status kartu QR Code",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID admin pengelola" },
+        "nis": { "type": "string", "description": "Nomor Induk Siswa" },
+        "fullName": { "type": "string", "description": "Nama lengkap siswa" },
+        "className": { "type": "string", "description": "Kelas siswa (misal X-A, XI-IPA-1)" },
+        "gender": { "type": "string", "enum": ["L", "P"], "description": "Jenis kelamin siswa" },
+        "qrToken": { "type": "string", "description": "Token unik pada QR Code siswa" },
+        "qrStatus": { "type": "string", "enum": ["PENDING", "ACTIVE", "REVOKED"], "description": "Status aktivasi QR Code siswa" },
+        "qrIssuedAt": { "type": "string", "format": "date-time", "description": "Waktu penerbitan QR Code oleh admin" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp pembuatan" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp pembaruan" }
+      },
+      "required": ["userId", "nis", "fullName", "className", "gender", "qrToken", "qrStatus", "createdAt", "updatedAt"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Catatan kehadiran harian siswa melalui pemindaian QR Code atau input admin",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID admin pencatat" },
+        "studentId": { "type": "string", "description": "ID dokumen siswa" },
+        "studentNis": { "type": "string", "description": "NIS siswa" },
+        "studentName": { "type": "string", "description": "Nama siswa" },
+        "className": { "type": "string", "description": "Kelas siswa" },
+        "dateKey": { "type": "string", "description": "Tanggal absensi YYYY-MM-DD" },
+        "status": { "type": "string", "enum": ["HADIR", "TERLAMBAT", "IZIN", "SAKIT", "ALPHA"], "description": "Status kehadiran" },
+        "method": { "type": "string", "enum": ["QR_SCAN", "MANUAL"], "description": "Metode pencatatan" },
+        "note": { "type": "string", "description": "Catatan tambahan kehadiran" },
+        "checkInTime": { "type": "string", "format": "date-time", "description": "Waktu absen masuk" },
+        "checkOutTime": { "type": "string", "format": "date-time", "description": "Waktu absen pulang" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp pembuatan" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp pembaruan" }
+      },
+      "required": ["userId", "studentId", "studentNis", "studentName", "className", "dateKey", "status", "method", "note", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/AdminSettings" },
+      "description": "Profil dan pengaturan sekolah milik admin"
+    },
+    "/users/{userId}/students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Daftar siswa SMA Taruna Andigha dan token QR masing-masing siswa"
+    },
+    "/users/{userId}/attendance/{attendanceId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Rekam absensi harian siswa (ID deterministik YYYY-MM-DD_studentId)"
+    }
+  }
+}

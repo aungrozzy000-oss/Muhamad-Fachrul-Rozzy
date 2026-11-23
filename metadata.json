@@ -1,0 +1,6 @@
+{
+  "name": "Absen Taruna",
+  "description": "Aplikasi absensi kehadiran siswa SMA Taruna Andigha berbasis QR Code dengan manajemen kartu QR oleh admin.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

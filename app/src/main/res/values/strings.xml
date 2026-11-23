@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Absen Taruna</string>
+    <string name="school_name">SMA Taruna Andigha</string>
+    <string name="app_tagline">Sistem Absensi &amp; Kartu QR Siswa</string>
+    <string name="sign_in_google">Masuk dengan Google</string>
+    <string name="sign_out">Keluar</string>
+    <string name="nav_dashboard">Beranda</string>
+    <string name="nav_scan">Scan QR</string>
+    <string name="nav_students">Siswa &amp; QR</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="camera_permission_rationale">Izin kamera diperlukan untuk memindai QR Code kartu siswa SMA Taruna Andigha.</string>
+    <string name="grant_camera_permission">Izinkan Kamera</string>
+    <string name="error_generic">Terjadi kesalahan. Silakan coba lagi.</string>
+</resources>

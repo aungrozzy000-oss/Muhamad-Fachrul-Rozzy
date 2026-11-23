@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidAdminSettings(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.adminName is string && data.adminName.size() >= 1 && data.adminName.size() <= 100 &&
+             data.schoolName is string && data.schoolName.size() >= 1 && data.schoolName.size() <= 120 &&
+             data.checkInDeadlineHour is int && data.checkInDeadlineHour >= 0 && data.checkInDeadlineHour <= 23 &&
+             data.checkInDeadlineMinute is int && data.checkInDeadlineMinute >= 0 && data.checkInDeadlineMinute <= 59 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStudent(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.nis is string && data.nis.size() >= 1 && data.nis.size() <= 30 &&
+             data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 100 &&
+             data.className is string && data.className.size() >= 1 && data.className.size() <= 30 &&
+             data.gender is string && data.gender in ['L', 'P'] &&
+             data.qrToken is string && data.qrToken.size() <= 120 &&
+             data.qrStatus is string && data.qrStatus in ['PENDING', 'ACTIVE', 'REVOKED'] &&
+             (data.qrStatus != 'ACTIVE' || data.qrToken.size() >= 6) &&
+             (!('qrIssuedAt' in data) || (data.qrIssuedAt is timestamp && data.qrIssuedAt <= request.time)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAttendance(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             isValidId(data.studentId) &&
+             data.studentNis is string && data.studentNis.size() >= 1 && data.studentNis.size() <= 30 &&
+             data.studentName is string && data.studentName.size() >= 1 && data.studentName.size() <= 100 &&
+             data.className is string && data.className.size() >= 1 && data.className.size() <= 30 &&
+             data.dateKey is string && data.dateKey.size() == 10 && data.dateKey.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+             data.status is string && data.status in ['HADIR', 'TERLAMBAT', 'IZIN', 'SAKIT', 'ALPHA'] &&
+             data.method is string && data.method in ['QR_SCAN', 'MANUAL'] &&
+             data.note is string && data.note.size() <= 200 &&
+             (!('checkInTime' in data) || (data.checkInTime is timestamp && data.checkInTime <= request.time)) &&
+             (!('checkOutTime' in data) || (data.checkOutTime is timestamp && data.checkOutTime <= request.time)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['userId', 'adminName', 'schoolName', 'checkInDeadlineHour', 'checkInDeadlineMinute', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'adminName', 'schoolName', 'checkInDeadlineHour', 'checkInDeadlineMinute', 'createdAt', 'updatedAt']) &&
+                       isValidAdminSettings(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidAdminSettings(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['adminName', 'schoolName', 'checkInDeadlineHour', 'checkInDeadlineMinute', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /students/{studentId} {
+        allow get: if isOwner(userId) && isValidId(studentId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(studentId) &&
+                         incoming().keys().hasAll(['userId', 'nis', 'fullName', 'className', 'gender', 'qrToken', 'qrStatus', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'nis', 'fullName', 'className', 'gender', 'qrToken', 'qrStatus', 'qrIssuedAt', 'createdAt', 'updatedAt']) &&
+                         isValidStudent(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(studentId) &&
+                         isValidStudent(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['nis', 'fullName', 'className', 'gender', 'qrToken', 'qrStatus', 'qrIssuedAt', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(studentId);
+      }
+
+      match /attendance/{attendanceId} {
+        allow get: if isOwner(userId) && isValidId(attendanceId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(attendanceId) &&
+                         incoming().keys().hasAll(['userId', 'studentId', 'studentNis', 'studentName', 'className', 'dateKey', 'status', 'method', 'note', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'studentId', 'studentNis', 'studentName', 'className', 'dateKey', 'status', 'method', 'note', 'checkInTime', 'checkOutTime', 'createdAt', 'updatedAt']) &&
+                         isValidAttendance(incoming(), userId) &&
+                         exists(/databases/$(database)/documents/users/$(userId)/students/$(incoming().studentId));
+
+        allow update: if isOwner(userId) &&
+                         isValidId(attendanceId) &&
+                         isValidAttendance(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().studentId == existing().studentId &&
+                         incoming().dateKey == existing().dateKey &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['studentNis', 'studentName', 'className', 'status', 'method', 'note', 'checkInTime', 'checkOutTime', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(attendanceId);
+      }
+    }
+  }
+}
